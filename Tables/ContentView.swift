@@ -46,6 +46,12 @@ struct ContentView: View {
     @State var currentMultiplier: Int = 1
     @State var multiplicationValue: String = ""
     @State var userAttemptsStack: [UserAttempt] = []
+    @State var playerScore = 0
+    
+    @State var showingScore = false
+    
+    // Other properties
+    @FocusState var showingKeyboard: Bool
     
     var body: some View {
         switch currentScreen {
@@ -69,7 +75,6 @@ struct ContentView: View {
                     
                     Button {
                         currentMultiplier = 1
-                        
                         currentScreen = .game
                     } label: {
                         Text("Play!")
@@ -84,21 +89,24 @@ struct ContentView: View {
                 Form {
                     Section {
                         HStack {
-                            Text("\(tablesOf) x \(currentMultiplier) = ")
-                                .font(.headline)
-                            
-                            TextField("\(tablesOf) x \(currentMultiplier) = ", text: $multiplicationValue, prompt: Text("Enter answer here"))
-                                .labelsHidden()
-                                .keyboardType(.numberPad)
+                            if !showingScore {
+                                Text("\(tablesOf) x \(currentMultiplier) = ")
+                                    .font(.headline)
+                                
+                                TextField("\(tablesOf) x \(currentMultiplier) = ", text: $multiplicationValue, prompt: Text("Enter answer here"))
+                                    .labelsHidden()
+                                    .keyboardType(.numberPad)
+                                    .focused($showingKeyboard)
+                            } else {
+                                Text("Your score: \(playerScore)/\(numQuestions)")
+                                    .font(.title.weight(.heavy))
+                                    .padding(50)
+                                    .frame(maxWidth: .infinity)
+                                    .multilineTextAlignment(.center)
+                            }
                         }
                         .onSubmit {
-                            let attempt = UserAttempt(correct: Int(multiplicationValue) == (tablesOf * currentMultiplier), question: "\(tablesOf) x \(currentMultiplier)", correctAnswer: (tablesOf * currentMultiplier), userAnswer: Int(multiplicationValue) ?? 0)
-                            
-                            withAnimation {
-                                userAttemptsStack.insert(attempt, at: 0)
-                                currentMultiplier += 1
-                                multiplicationValue = ""
-                            }
+                            processAnswer()
                         }
                     }
                     
@@ -118,8 +126,67 @@ struct ContentView: View {
                     } header: {
                         Text(userAttemptsStack.count == 0 ? "": "Previous Sums")
                     }
+                    
+                    if showingScore {
+                        Section {
+                            Button {
+                                // Reset everything
+                                currentMultiplier = 0
+                                multiplicationValue = ""
+                                tablesOf = 2
+                                numQuestions = QuestionNumberVariant.five.rawValue
+                                userAttemptsStack = []
+                                playerScore = 0
+                                showingKeyboard = false
+                                currentScreen = .settings
+                                showingScore = false
+                            } label: {
+                                Text("Play again!")
+                                    .font(.title3.weight(.bold))
+                                    .frame(maxWidth: .infinity, minHeight: 44)
+                            }
+                        }
+                    }
                 }
-                .navigationTitle("Tables of \(tablesOf)")
+                .navigationTitle(showingScore ? "Game Over!": "Tables of \(tablesOf)")
+                .toolbar {
+                    ToolbarItemGroup(placement: .keyboard) {
+                        Button {
+                            showingKeyboard = false
+                        } label: {
+                            Image(systemName: "keyboard.chevron.compact.down")
+                        }
+                        Spacer()
+                        Button("Submit") {
+                            processAnswer()
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    func processAnswer() {
+        if Int(multiplicationValue) == (tablesOf * currentMultiplier) {
+            playerScore += 1
+        }
+        
+        let attempt = UserAttempt(correct: Int(multiplicationValue) == (tablesOf * currentMultiplier), question: "\(tablesOf) x \(currentMultiplier)", correctAnswer: (tablesOf * currentMultiplier), userAnswer: Int(multiplicationValue) ?? 0)
+        
+        withAnimation {
+            userAttemptsStack.insert(attempt, at: 0)
+        }
+        
+        if currentMultiplier < numQuestions {
+            withAnimation {
+                currentMultiplier += 1
+                multiplicationValue = ""
+            }
+        } else {
+            withAnimation {
+                multiplicationValue = ""
+                showingKeyboard = false
+                showingScore = true
             }
         }
     }
