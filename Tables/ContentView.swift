@@ -61,7 +61,11 @@ struct ContentView: View {
                     Section {
                         VStack(alignment: .leading, spacing: 10) {
                             Text("Tables of")
-                            Stepper("\(tablesOf)", value: $tablesOf, in: 2...12)
+                            Stepper("\(tablesOf)", value: $tablesOf, in: 2...12) { _ in
+                                DispatchQueue.main.async {
+                                    UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+                                }
+                            }
                         }
                     }
                     
